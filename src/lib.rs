@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::hash::{BuildHasher, Hash};
 use std::iter::FromIterator;
 
-pub trait Map {
+pub trait ReadOnlyMap {
     type Key: Hash + Eq;
     type Value;
 
@@ -18,11 +18,12 @@ pub trait Map {
         Q: Hash + Eq + ?Sized;
 }
 
+#[derive(Clone, Debug, Hash, Eq, Ord, PartialEq, PartialOrd)]
 pub struct ChainMap<M> {
     inner: Vec<M>,
 }
 
-impl<M: Map> ChainMap<M> {
+impl<M: ReadOnlyMap> ChainMap<M> {
     pub fn new() -> Self {
         Default::default()
     }
@@ -50,23 +51,27 @@ impl<M: Map> ChainMap<M> {
     }
 
     pub fn push_map(&mut self, map: M) {
-        self.inner.push(map);
+        self.inner.push(map)
+    }
+
+    pub fn insert_map(&mut self, index: usize, element: M) {
+        self.inner.insert(index, element)
     }
 }
 
-impl<M: Map> Default for ChainMap<M> {
+impl<M> Default for ChainMap<M> {
     fn default() -> Self {
         ChainMap { inner: Vec::new() }
     }
 }
 
-impl<M: Map> From<M> for ChainMap<M> {
+impl<M> From<M> for ChainMap<M> {
     fn from(map: M) -> Self {
         ChainMap { inner: vec![map] }
     }
 }
 
-impl<M: Map> FromIterator<M> for ChainMap<M> {
+impl<M> FromIterator<M> for ChainMap<M> {
     fn from_iter<I>(iter: I) -> Self
     where
         I: IntoIterator<Item = M>,
@@ -77,7 +82,16 @@ impl<M: Map> FromIterator<M> for ChainMap<M> {
     }
 }
 
-impl<K, V, S> Map for HashMap<K, V, S>
+impl<M> Extend<M> for ChainMap<M> {
+    fn extend<I>(&mut self, iter: I)
+    where
+        I: IntoIterator<Item = M>,
+    {
+        self.inner.extend(iter);
+    }
+}
+
+impl<K, V, S> ReadOnlyMap for HashMap<K, V, S>
 where
     K: Eq + Hash,
     S: BuildHasher,
@@ -102,8 +116,8 @@ where
     }
 }
 
-#[cfg(feature = "index-map")]
-impl<K, V, S> Map for indexmap::IndexMap<K, V, S>
+#[cfg(feature = "indexmap")]
+impl<K, V, S> ReadOnlyMap for indexmap::IndexMap<K, V, S>
 where
     K: Eq + Hash,
     S: BuildHasher,

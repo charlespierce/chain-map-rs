@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["Charles Pierce <cpierce.grad@gmail.com>"]
 edition = "2018"
 readme = "README.md"
-license = "MIT"
+license = "MIT OR Apache-2.0"
 description = "A chain of maps with a single view into the aggregated values."
 repository = "https://github.com/charlespierce/chain-map-rs"
 keywords = ["hashmap", "chain"]
@@ -12,6 +12,3 @@ categories = ["data-structures"]
 
 [dependencies]
 indexmap = { version = "1", optional = true }
-
-[features]
-index-map = ["indexmap"]
