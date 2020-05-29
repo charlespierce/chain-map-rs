@@ -7,12 +7,12 @@ pub trait ReadOnlyMap {
     type Key: Hash + Eq;
     type Value;
 
-    fn has_key<Q>(&self, k: &Q) -> bool
+    fn contains_key<Q>(&self, k: &Q) -> bool
     where
         Self::Key: Borrow<Q>,
         Q: Hash + Eq + ?Sized;
 
-    fn get_value<Q>(&self, k: &Q) -> Option<&Self::Value>
+    fn get<Q>(&self, k: &Q) -> Option<&Self::Value>
     where
         Self::Key: Borrow<Q>,
         Q: Hash + Eq + ?Sized;
@@ -39,7 +39,7 @@ impl<M: ReadOnlyMap> ChainMap<M> {
         M::Key: Borrow<Q>,
         Q: Hash + Eq + ?Sized,
     {
-        self.inner.iter().any(|map| map.has_key(k))
+        self.inner.iter().any(|map| map.contains_key(k))
     }
 
     pub fn get<Q>(&self, k: &Q) -> Option<&M::Value>
@@ -47,7 +47,7 @@ impl<M: ReadOnlyMap> ChainMap<M> {
         M::Key: Borrow<Q>,
         Q: Hash + Eq + ?Sized,
     {
-        self.inner.iter().find_map(|map| map.get_value(k))
+        self.inner.iter().find_map(|map| map.get(k))
     }
 
     pub fn push_map(&mut self, map: M) {
@@ -62,12 +62,6 @@ impl<M: ReadOnlyMap> ChainMap<M> {
 impl<M> Default for ChainMap<M> {
     fn default() -> Self {
         ChainMap { inner: Vec::new() }
-    }
-}
-
-impl<M> From<M> for ChainMap<M> {
-    fn from(map: M) -> Self {
-        ChainMap { inner: vec![map] }
     }
 }
 
@@ -99,7 +93,7 @@ where
     type Key = K;
     type Value = V;
 
-    fn has_key<Q>(&self, k: &Q) -> bool
+    fn contains_key<Q>(&self, k: &Q) -> bool
     where
         K: Borrow<Q>,
         Q: Hash + Eq + ?Sized,
@@ -107,33 +101,7 @@ where
         self.contains_key(k)
     }
 
-    fn get_value<Q>(&self, k: &Q) -> Option<&V>
-    where
-        K: Borrow<Q>,
-        Q: Hash + Eq + ?Sized,
-    {
-        self.get(k)
-    }
-}
-
-#[cfg(feature = "indexmap")]
-impl<K, V, S> ReadOnlyMap for indexmap::IndexMap<K, V, S>
-where
-    K: Eq + Hash,
-    S: BuildHasher,
-{
-    type Key = K;
-    type Value = V;
-
-    fn has_key<Q>(&self, k: &Q) -> bool
-    where
-        K: Borrow<Q>,
-        Q: Hash + Eq + ?Sized,
-    {
-        self.contains_key(k)
-    }
-
-    fn get_value<Q>(&self, k: &Q) -> Option<&V>
+    fn get<Q>(&self, k: &Q) -> Option<&V>
     where
         K: Borrow<Q>,
         Q: Hash + Eq + ?Sized,

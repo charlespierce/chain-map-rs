@@ -9,6 +9,3 @@ description = "A chain of maps with a single view into the aggregated values."
 repository = "https://github.com/charlespierce/chain-map-rs"
 keywords = ["hashmap", "chain"]
 categories = ["data-structures"]
-
-[dependencies]
-indexmap = { version = "1", optional = true }
