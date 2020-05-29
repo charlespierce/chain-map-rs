@@ -1,31 +1,18 @@
 use std::borrow::Borrow;
+use std::collections::hash_map::RandomState;
 use std::collections::HashMap;
 use std::hash::{BuildHasher, Hash};
 use std::iter::FromIterator;
+use std::ops::Index;
 
-pub trait ReadOnlyMap {
-    type Key: Hash + Eq;
-    type Value;
-
-    fn contains_key<Q>(&self, k: &Q) -> bool
-    where
-        Self::Key: Borrow<Q>,
-        Q: Hash + Eq + ?Sized;
-
-    fn get<Q>(&self, k: &Q) -> Option<&Self::Value>
-    where
-        Self::Key: Borrow<Q>,
-        Q: Hash + Eq + ?Sized;
+#[derive(Clone, Debug)]
+pub struct ChainMap<K, V, S = RandomState> {
+    inner: Vec<HashMap<K, V, S>>,
 }
 
-#[derive(Clone, Debug, Hash, Eq, Ord, PartialEq, PartialOrd)]
-pub struct ChainMap<M> {
-    inner: Vec<M>,
-}
-
-impl<M: ReadOnlyMap> ChainMap<M> {
+impl<K, V, S> ChainMap<K, V, S> {
     pub fn new() -> Self {
-        Default::default()
+        Self::default()
     }
 
     pub fn with_capacity(capacity: usize) -> Self {
@@ -34,41 +21,56 @@ impl<M: ReadOnlyMap> ChainMap<M> {
         }
     }
 
+    pub fn push_map(&mut self, map: HashMap<K, V, S>) {
+        self.inner.push(map)
+    }
+}
+
+impl<K, V, S> ChainMap<K, V, S>
+where
+    K: Hash + Eq,
+    S: BuildHasher,
+{
     pub fn contains_key<Q>(&self, k: &Q) -> bool
     where
-        M::Key: Borrow<Q>,
+        K: Borrow<Q>,
         Q: Hash + Eq + ?Sized,
     {
         self.inner.iter().any(|map| map.contains_key(k))
     }
 
-    pub fn get<Q>(&self, k: &Q) -> Option<&M::Value>
+    pub fn get<Q>(&self, k: &Q) -> Option<&V>
     where
-        M::Key: Borrow<Q>,
+        K: Borrow<Q>,
         Q: Hash + Eq + ?Sized,
     {
         self.inner.iter().find_map(|map| map.get(k))
     }
-
-    pub fn push_map(&mut self, map: M) {
-        self.inner.push(map)
-    }
-
-    pub fn insert_map(&mut self, index: usize, element: M) {
-        self.inner.insert(index, element)
-    }
 }
 
-impl<M> Default for ChainMap<M> {
+impl<K, V, S> Default for ChainMap<K, V, S> {
     fn default() -> Self {
         ChainMap { inner: Vec::new() }
     }
 }
 
-impl<M> FromIterator<M> for ChainMap<M> {
+impl<K, Q, V, S> Index<&Q> for ChainMap<K, V, S>
+where
+    K: Eq + Hash + Borrow<Q>,
+    Q: Eq + Hash + ?Sized,
+    S: BuildHasher,
+{
+    type Output = V;
+
+    fn index(&self, k: &Q) -> &V {
+        self.get(k).expect("no entry found for key")
+    }
+}
+
+impl<K, V, S> FromIterator<HashMap<K, V, S>> for ChainMap<K, V, S> {
     fn from_iter<I>(iter: I) -> Self
     where
-        I: IntoIterator<Item = M>,
+        I: IntoIterator<Item = HashMap<K, V, S>>,
     {
         ChainMap {
             inner: Vec::from_iter(iter),
@@ -76,36 +78,30 @@ impl<M> FromIterator<M> for ChainMap<M> {
     }
 }
 
-impl<M> Extend<M> for ChainMap<M> {
+impl<K, V, S> Extend<HashMap<K, V, S>> for ChainMap<K, V, S> {
     fn extend<I>(&mut self, iter: I)
     where
-        I: IntoIterator<Item = M>,
+        I: IntoIterator<Item = HashMap<K, V, S>>,
     {
-        self.inner.extend(iter);
+        self.inner.extend(iter)
     }
 }
 
-impl<K, V, S> ReadOnlyMap for HashMap<K, V, S>
+impl<K, V, S> PartialEq for ChainMap<K, V, S>
 where
     K: Eq + Hash,
+    V: PartialEq,
     S: BuildHasher,
 {
-    type Key = K;
-    type Value = V;
-
-    fn contains_key<Q>(&self, k: &Q) -> bool
-    where
-        K: Borrow<Q>,
-        Q: Hash + Eq + ?Sized,
-    {
-        self.contains_key(k)
+    fn eq(&self, other: &ChainMap<K, V, S>) -> bool {
+        self.inner.eq(&other.inner)
     }
+}
 
-    fn get<Q>(&self, k: &Q) -> Option<&V>
-    where
-        K: Borrow<Q>,
-        Q: Hash + Eq + ?Sized,
-    {
-        self.get(k)
-    }
+impl<K, V, S> Eq for ChainMap<K, V, S>
+where
+    K: Eq + Hash,
+    V: Eq,
+    S: BuildHasher,
+{
 }
