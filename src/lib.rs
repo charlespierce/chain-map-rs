@@ -4,6 +4,10 @@
 //! with a given key is the value of that key in the highest-precedence map
 //! that contains the key.
 //!
+//! ## Rust Version
+//!
+//! This version of chain-map requires Rust 1.31 or later.
+//!
 //! # Precedence
 //!
 //! Maps added to the [`ChainMap`] earlier have precedence over those added
@@ -49,11 +53,12 @@
 use std::borrow::Borrow;
 use std::collections::hash_map::RandomState;
 use std::collections::HashMap;
+use std::fmt::{self, Debug};
 use std::hash::{BuildHasher, Hash};
 use std::iter::FromIterator;
 use std::ops::Index;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 /// The `ChainMap` type. See [the module level documentation](index.html) for
 /// more.
 pub struct ChainMap<K, V, S = RandomState> {
@@ -184,36 +189,6 @@ where
     {
         self.inner.iter().find_map(|map| map.get(k))
     }
-
-    /// Returns the highest-precedence key-value pair associated with the given
-    /// key.
-    ///
-    /// As with [`HashMap::get_key_value`], the supplied key may be any
-    /// borrowed form of the key type, but `Hash` and `Eq` on the borrowed form
-    /// _must_ match those for the key type.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use std::collections::HashMap;
-    /// use chain_map::ChainMap;
-    ///
-    /// let mut hash = HashMap::new();
-    /// hash.insert("key", "value");
-    ///
-    /// let mut chain = ChainMap::new();
-    /// chain.push_map(hash);
-    /// assert_eq!(chain.get_key_value("key"), Some((&"key", &"value")));
-    /// ```
-    ///
-    /// [`HashMap::get_key_value`]: https://doc.rust-lang.org/std/collections/struct.HashMap.html#method.get_key_value
-    pub fn get_key_value<Q>(&self, k: &Q) -> Option<(&K, &V)>
-    where
-        K: Borrow<Q>,
-        Q: Hash + Eq + ?Sized,
-    {
-        self.inner.iter().find_map(|map| map.get_key_value(k))
-    }
 }
 
 impl<K, V, S> Default for ChainMap<K, V, S> {
@@ -252,6 +227,19 @@ impl<K, V, S> Extend<HashMap<K, V, S>> for ChainMap<K, V, S> {
         I: IntoIterator<Item = HashMap<K, V, S>>,
     {
         self.inner.extend(iter)
+    }
+}
+
+impl<K, V, S> Debug for ChainMap<K, V, S>
+where
+    K: Eq + Hash + Debug,
+    V: Debug,
+    S: BuildHasher,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ChainMap")
+            .field("inner", &self.inner)
+            .finish()
     }
 }
 
@@ -335,28 +323,6 @@ mod tests {
         assert_eq!(chain.get("second"), Some(&2));
         assert_eq!(chain.get("third"), Some(&3));
         assert_eq!(chain.get("fourth"), None);
-    }
-
-    #[test]
-    fn get_key_value_follows_precedence_order() {
-        let mut first_map = HashMap::new();
-        first_map.insert("first", 1);
-
-        let mut second_map = HashMap::new();
-        second_map.insert("first", 1);
-        second_map.insert("second", 2);
-
-        let mut third_map = HashMap::new();
-        third_map.insert("first", 3);
-        third_map.insert("second", 3);
-        third_map.insert("third", 3);
-
-        let chain: ChainMap<_, _> = vec![first_map, second_map, third_map].into_iter().collect();
-
-        assert_eq!(chain.get_key_value("first"), Some((&"first", &1)));
-        assert_eq!(chain.get_key_value("second"), Some((&"second", &2)));
-        assert_eq!(chain.get_key_value("third"), Some((&"third", &3)));
-        assert_eq!(chain.get_key_value("fourth"), None);
     }
 
     #[test]
