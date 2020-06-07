@@ -46,6 +46,14 @@ where
     {
         self.inner.iter().find_map(|map| map.get(k))
     }
+
+    pub fn get_key_value<Q>(&self, k: &Q) -> Option<(&K, &V)>
+    where
+        K: Borrow<Q>,
+        Q: Hash + Eq + ?Sized,
+    {
+        self.inner.iter().find_map(|map| map.get_key_value(k))
+    }
 }
 
 impl<K, V, S> Default for ChainMap<K, V, S> {
