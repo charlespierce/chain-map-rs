@@ -1,5 +1,17 @@
 # chain-map
 
+<p align="center">
+  <a href="https://github.com/charlespierce/chain-map-rs/actions?query=workflow%3ATests">
+    <img alt="Test Status" src="https://github.com/charlespierce/chain-map-rs/workflows/Tests/badge.svg" />
+  </a>
+  <a href="https://docs.rs/chain-map/0.1.0/chain_map/">
+    <img alt="Documentation" src="https://docs.rs/chain-map/badge.svg" />
+  </a>
+  <a href="https://www.rust-lang.org/">
+    <img alt="Minimum Rust Version (1.31)" src="https://img.shields.io/badge/rust-1.31%2B-orange.svg" />
+  </a>
+</p>
+
 The `ChainMap` type groups a chain of `HashMap`s together in precedence
 order and provides a single, unified view into the values. The semantics
 for keys are the same as for a `HashMap`, however the value associated
